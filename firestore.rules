@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Función helper para verificar autenticación
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Función helper para verificar que el usuario es el dueño
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Reglas para la colección de usuarios
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Reglas para la colección de cuentas
+    match /accounts/{accountId} {
+      allow read, write: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid ||
+         request.resource.data.userId == request.auth.uid);
+    }
+
+    // Reglas para la colección de transacciones
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Las transacciones no deben modificarse ni eliminarse
+    }
+
+    // Reglas para la colección de préstamos
+    match /loans/{loanId} {
+      allow read, write: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid ||
+         request.resource.data.userId == request.auth.uid);
+    }
+
+    // Reglas para la colección de notificaciones
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create, delete: if false; // Solo el servidor debe crear/eliminar notificaciones
+    }
+
+    // Reglas para la colección de mensajes (si existe)
+    match /messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+  }
+}
