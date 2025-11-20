@@ -36,4 +36,19 @@ interface AccountRepository {
      * Actualiza el perfil del usuario.
      */
     suspend fun updateUserProfile(user: User): Result<Unit>
+
+    /**
+     * Busca una cuenta por número de cuenta.
+     */
+    suspend fun getAccountByAccountNumber(accountNumber: String): Result<Account>
+
+    /**
+     * Transfiere dinero entre dos cuentas.
+     */
+    suspend fun transferMoney(
+        fromUserId: String,
+        toAccountNumber: String,
+        amount: Double,
+        description: String
+    ): Result<Unit>
 }

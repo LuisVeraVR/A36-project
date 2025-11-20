@@ -32,6 +32,7 @@ import java.util.*
 @Composable
 fun HomeScreen(
     onNavigateToTransactions: () -> Unit,
+    onNavigateToTransfer: () -> Unit,
     onNavigateToLoans: () -> Unit,
     onNavigateToNotifications: () -> Unit,
     onLogout: () -> Unit,
@@ -77,6 +78,7 @@ fun HomeScreen(
                         recentIncome = state.recentIncome,
                         onNavigateToLoans = onNavigateToLoans,
                         onNavigateToTransactions = onNavigateToTransactions,
+                        onNavigateToTransfer = onNavigateToTransfer,
                         onLogout = onLogout
                     )
                 }
@@ -92,6 +94,7 @@ private fun HomeContent(
     recentIncome: List<Double>,
     onNavigateToLoans: () -> Unit,
     onNavigateToTransactions: () -> Unit,
+    onNavigateToTransfer: () -> Unit,
     onLogout: () -> Unit
 ) {
     Column(
@@ -113,11 +116,15 @@ private fun HomeContent(
         // Tarjetas de cuenta
         AccountCardsSection(
             balance = account.balance,
+            accountNumber = account.accountNumber,
             pockets = recentIncome.sum()
         )
 
         // Sección Principal
-        MainActionsSection(onNavigateToTransactions = onNavigateToTransactions)
+        MainActionsSection(
+            onNavigateToTransactions = onNavigateToTransactions,
+            onNavigateToTransfer = onNavigateToTransfer
+        )
 
         // Otras opciones
         OtherOptionsSection(onNavigateToLoans = onNavigateToLoans)
@@ -204,8 +211,16 @@ private fun BalanceSection(balance: Double) {
 @Composable
 private fun AccountCardsSection(
     balance: Double,
+    accountNumber: String,
     pockets: Double
 ) {
+    // Formatear número de cuenta para mostrar últimos 4 dígitos
+    val lastFourDigits = if (accountNumber.length >= 4) {
+        accountNumber.takeLast(4)
+    } else {
+        accountNumber
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -222,7 +237,7 @@ private fun AccountCardsSection(
             cardType = "VISA",
             title = "Saldo",
             amount = balance,
-            cardNumber = "** 6917"
+            cardNumber = "** $lastFourDigits"
         )
 
         // Tarjeta Visa - Bolsillos
@@ -237,7 +252,7 @@ private fun AccountCardsSection(
             cardType = "VISA",
             title = "Montos en bolsillos",
             amount = pockets,
-            cardNumber = "** 4552"
+            cardNumber = "** $lastFourDigits"
         )
     }
 }
@@ -300,7 +315,10 @@ private fun AccountCard(
 }
 
 @Composable
-private fun MainActionsSection(onNavigateToTransactions: () -> Unit) {
+private fun MainActionsSection(
+    onNavigateToTransactions: () -> Unit,
+    onNavigateToTransfer: () -> Unit
+) {
     Column {
         Text(
             text = "Principal:",
@@ -317,14 +335,14 @@ private fun MainActionsSection(onNavigateToTransactions: () -> Unit) {
             ActionButton(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.Send,
-                text = "Transferencia de cuenta a cuenta",
-                onClick = onNavigateToTransactions
+                text = "Transferir dinero",
+                onClick = onNavigateToTransfer
             )
 
             ActionButton(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.AccountBalance,
-                text = "Transferencia a otros bancos",
+                text = "Ver transacciones",
                 onClick = onNavigateToTransactions
             )
         }

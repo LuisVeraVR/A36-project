@@ -20,4 +20,5 @@ sealed class Routes(val route: String) {
         fun createRoute(loanId: String) = "loan_detail/$loanId"
     }
     object Notifications : Routes("notifications")
+    object Transfer : Routes("transfer")
 }
