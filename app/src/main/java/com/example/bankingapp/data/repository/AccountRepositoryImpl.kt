@@ -150,4 +150,131 @@ class AccountRepositoryImpl(
             Result.failure(Exception("Error al actualizar perfil: ${e.localizedMessage}"))
         }
     }
+
+    override suspend fun getAccountByAccountNumber(accountNumber: String): Result<Account> {
+        return try {
+            Log.d(TAG, "Buscando cuenta por número: $accountNumber")
+
+            val querySnapshot = firestore.collection(ACCOUNTS_COLLECTION)
+                .whereEqualTo("accountNumber", accountNumber)
+                .limit(1)
+                .get()
+                .await()
+
+            if (querySnapshot.isEmpty) {
+                Log.w(TAG, "Cuenta no encontrada con número: $accountNumber")
+                return Result.failure(Exception("Cuenta no encontrada"))
+            }
+
+            val document = querySnapshot.documents[0]
+            val accountDto = document.toObject(AccountDto::class.java)
+                ?: return Result.failure(Exception("Error al parsear cuenta"))
+
+            val account = accountDto.toDomain()
+            Log.d(TAG, "Cuenta encontrada: ${account.userId}")
+
+            Result.success(account)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error buscando cuenta por número", e)
+            Result.failure(Exception("Error al buscar cuenta: ${e.localizedMessage}"))
+        }
+    }
+
+    override suspend fun transferMoney(
+        fromUserId: String,
+        toAccountNumber: String,
+        amount: Double,
+        description: String
+    ): Result<Unit> {
+        return try {
+            Log.d(TAG, "Iniciando transferencia de $amount desde $fromUserId a cuenta $toAccountNumber")
+
+            // Validar monto
+            if (amount <= 0) {
+                return Result.failure(Exception("El monto debe ser mayor a 0"))
+            }
+
+            // Obtener cuenta origen
+            val fromAccountResult = getAccount(fromUserId)
+            if (fromAccountResult.isFailure) {
+                return Result.failure(Exception("Error al obtener cuenta de origen"))
+            }
+            val fromAccount = fromAccountResult.getOrThrow()
+
+            // Verificar saldo suficiente
+            if (fromAccount.balance < amount) {
+                return Result.failure(Exception("Saldo insuficiente"))
+            }
+
+            // Obtener cuenta destino
+            val toAccountResult = getAccountByAccountNumber(toAccountNumber)
+            if (toAccountResult.isFailure) {
+                return Result.failure(Exception("Cuenta destino no encontrada"))
+            }
+            val toAccount = toAccountResult.getOrThrow()
+
+            // No permitir transferirse a sí mismo
+            if (fromAccount.userId == toAccount.userId) {
+                return Result.failure(Exception("No puedes transferir a tu propia cuenta"))
+            }
+
+            // Calcular nuevos balances
+            val newFromBalance = fromAccount.balance - amount
+            val newToBalance = toAccount.balance + amount
+
+            // Ejecutar transferencia usando batch
+            val batch = firestore.batch()
+
+            // Actualizar balance origen
+            val fromAccountRef = firestore.collection(ACCOUNTS_COLLECTION).document(fromUserId)
+            batch.update(fromAccountRef, "balance", newFromBalance)
+            batch.update(fromAccountRef, "updatedAt", com.google.firebase.Timestamp.now())
+
+            // Actualizar balance destino
+            val toAccountRef = firestore.collection(ACCOUNTS_COLLECTION).document(toAccount.userId)
+            batch.update(toAccountRef, "balance", newToBalance)
+            batch.update(toAccountRef, "updatedAt", com.google.firebase.Timestamp.now())
+
+            // Crear transacción de salida (EXPENSE)
+            val fromTransactionRef = firestore.collection("transactions").document()
+            val fromTransactionData = hashMapOf(
+                "id" to fromTransactionRef.id,
+                "userId" to fromUserId,
+                "amount" to amount,
+                "type" to "EXPENSE",
+                "category" to "Transferencia",
+                "description" to description.ifEmpty { "Transferencia a cuenta $toAccountNumber" },
+                "reference" to toAccountNumber,
+                "date" to com.google.firebase.Timestamp.now(),
+                "createdAt" to com.google.firebase.Timestamp.now(),
+                "balanceAfter" to newFromBalance
+            )
+            batch.set(fromTransactionRef, fromTransactionData)
+
+            // Crear transacción de entrada (INCOME)
+            val toTransactionRef = firestore.collection("transactions").document()
+            val toTransactionData = hashMapOf(
+                "id" to toTransactionRef.id,
+                "userId" to toAccount.userId,
+                "amount" to amount,
+                "type" to "INCOME",
+                "category" to "Transferencia",
+                "description" to "Transferencia desde cuenta ${fromAccount.accountNumber}",
+                "reference" to fromAccount.accountNumber,
+                "date" to com.google.firebase.Timestamp.now(),
+                "createdAt" to com.google.firebase.Timestamp.now(),
+                "balanceAfter" to newToBalance
+            )
+            batch.set(toTransactionRef, toTransactionData)
+
+            // Ejecutar batch
+            batch.commit().await()
+
+            Log.d(TAG, "Transferencia completada exitosamente")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en transferencia", e)
+            Result.failure(Exception("Error al transferir: ${e.localizedMessage}"))
+        }
+    }
 }

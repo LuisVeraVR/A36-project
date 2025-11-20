@@ -81,18 +81,34 @@ class LoginViewModel : ViewModel() {
 
         var isValid = true
 
-        // Validar username
+        // Validar username (puede ser email o username)
         if (username.isEmpty()) {
-            _uiState.update { it.copy(usernameError = "El usuario es requerido") }
+            _uiState.update { it.copy(usernameError = "El usuario o email es requerido") }
             isValid = false
+        } else if (username.contains("@")) {
+            // Si contiene @, validar como email
+            if (!android.util.Patterns.EMAIL_ADDRESS.matcher(username).matches()) {
+                _uiState.update { it.copy(usernameError = "Email inválido") }
+                isValid = false
+            }
         } else if (username.length < 3) {
-            _uiState.update { it.copy(usernameError = "Usuario inválido") }
+            // Si no es email, validar como username
+            _uiState.update { it.copy(usernameError = "Usuario debe tener mínimo 3 caracteres") }
             isValid = false
         }
 
-        // Validar contraseña
+        // Validar contraseña (mín 8 chars, 1 mayúscula, 1 número)
         if (password.isEmpty()) {
             _uiState.update { it.copy(passwordError = "La contraseña es requerida") }
+            isValid = false
+        } else if (password.length < 8) {
+            _uiState.update { it.copy(passwordError = "Mínimo 8 caracteres") }
+            isValid = false
+        } else if (!password.any { it.isUpperCase() }) {
+            _uiState.update { it.copy(passwordError = "Debe contener al menos 1 mayúscula") }
+            isValid = false
+        } else if (!password.any { it.isDigit() }) {
+            _uiState.update { it.copy(passwordError = "Debe contener al menos 1 número") }
             isValid = false
         }
 

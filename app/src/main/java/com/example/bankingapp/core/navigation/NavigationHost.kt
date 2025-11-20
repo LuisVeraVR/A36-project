@@ -18,6 +18,7 @@ import com.example.bankingapp.ui.notifications.NotificationsScreen
 import com.example.bankingapp.ui.splash.SplashScreen
 import com.example.bankingapp.ui.transactions.detail.TransactionDetailScreen
 import com.example.bankingapp.ui.transactions.list.TransactionsListScreen
+import com.example.bankingapp.ui.transfer.TransferScreen
 
 @Composable
 fun NavigationHost(
@@ -92,6 +93,9 @@ fun NavigationHost(
             HomeScreen(
                 onNavigateToTransactions = {
                     navController.navigate(Routes.TransactionsList.route)
+                },
+                onNavigateToTransfer = {
+                    navController.navigate(Routes.Transfer.route)
                 },
                 onNavigateToLoans = {
                     navController.navigate(Routes.LoanSimulator.route)
@@ -215,6 +219,20 @@ fun NavigationHost(
                 onNotificationClick = { relatedLoanId ->
                     relatedLoanId?.let {
                         navController.navigate(Routes.LoanDetail.createRoute(it))
+                    }
+                }
+            )
+        }
+
+        // Transfer
+        composable(Routes.Transfer.route) {
+            TransferScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onTransferSuccess = {
+                    navController.navigate(Routes.Home.route) {
+                        popUpTo(Routes.Home.route) { inclusive = true }
                     }
                 }
             )
