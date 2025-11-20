@@ -10,6 +10,7 @@ sealed class HomeUiState {
     object Loading : HomeUiState()
     data class Success(
         val account: Account,
+        val userName: String,
         val recentIncome: List<Double>
     ) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
