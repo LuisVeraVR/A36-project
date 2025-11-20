@@ -73,6 +73,7 @@ fun HomeScreen(
                 is HomeUiState.Success -> {
                     HomeContent(
                         account = state.account,
+                        userName = state.userName,
                         recentIncome = state.recentIncome,
                         onNavigateToLoans = onNavigateToLoans,
                         onNavigateToTransactions = onNavigateToTransactions,
@@ -87,6 +88,7 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     account: Account,
+    userName: String,
     recentIncome: List<Double>,
     onNavigateToLoans: () -> Unit,
     onNavigateToTransactions: () -> Unit,
@@ -101,7 +103,7 @@ private fun HomeContent(
     ) {
         // Header con saludo
         HeaderSection(
-            userName = "Usuario",  // Puedes obtener el nombre real del usuario
+            userName = userName,
             onLogout = onLogout
         )
 
