@@ -107,6 +107,7 @@ class HomeViewModel : ViewModel() {
 
     /**
      * Calcula los montos de ingresos recientes (últimos 7 días).
+     * Maneja errores de forma robusta para no bloquear la carga de la pantalla principal.
      */
     private suspend fun calculateRecentIncome(userId: String): List<Double> {
         return try {
@@ -120,9 +121,11 @@ class HomeViewModel : ViewModel() {
 
             if (transactionsResult.isSuccess) {
                 val transactions = transactionsResult.getOrThrow()
-                transactions.map { it.amount }
+                val incomes = transactions.map { it.amount }
+                Log.d("HomeViewModel", "✅ Ingresos recientes: $incomes")
+                incomes
             } else {
-                Log.w("HomeViewModel", "⚠️ No se pudieron obtener transacciones recientes")
+                Log.w("HomeViewModel", "⚠️ No se pudieron obtener transacciones recientes: ${transactionsResult.exceptionOrNull()?.message}")
                 emptyList()
             }
         } catch (e: Exception) {
