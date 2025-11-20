@@ -45,7 +45,6 @@ class TransactionRepositoryImpl(
             // Construir query base
             var query: Query = firestore.collection(TRANSACTIONS_COLLECTION)
                 .whereEqualTo("userId", userId)
-                .orderBy("date", Query.Direction.DESCENDING)
 
             // Aplicar filtro de tipo si existe
             if (type != null) {
@@ -72,7 +71,10 @@ class TransactionRepositoryImpl(
                 doc.toObject(TransactionDto::class.java)?.copy(id = doc.id)?.toDomain()
             }
 
-            Result.success(transactions)
+            // Ordenar en memoria para evitar requerir índice compuesto en Firebase
+            val sortedTransactions = transactions.sortedByDescending { it.timestamp }
+
+            Result.success(sortedTransactions)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -128,7 +130,6 @@ class TransactionRepositoryImpl(
             val snapshot = firestore.collection(TRANSACTIONS_COLLECTION)
                 .whereEqualTo("userId", userId)
                 .whereEqualTo("category", category)
-                .orderBy("date", Query.Direction.DESCENDING)
                 .get()
                 .await()
 
@@ -136,7 +137,10 @@ class TransactionRepositoryImpl(
                 doc.toObject(TransactionDto::class.java)?.copy(id = doc.id)?.toDomain()
             }
 
-            Result.success(transactions)
+            // Ordenar en memoria para evitar requerir índice compuesto en Firebase
+            val sortedTransactions = transactions.sortedByDescending { it.timestamp }
+
+            Result.success(sortedTransactions)
         } catch (e: Exception) {
             Result.failure(e)
         }
